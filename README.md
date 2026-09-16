@@ -9,6 +9,7 @@ that game.
 No `androidx`. Kotlin + a small C++ libretro frontend around the Snes9x core.
 
 ---
+![ZAMN dual screen preview](https://raw.githubusercontent.com/crazylobstergod/zamn-dual-screen/main/docs/preview.png)
 
 ## Features
 
