@@ -120,32 +120,6 @@ adb shell am start -n com.example.snestemplate/.MainActivity
    bottom-right has **Save** / **Load** state.
 4. Gamepad: D-pad up/down switches menu selection, A confirms, B/Back closes.
 
-## Adding a memory field
-
-Field data lives in `app/src/main/assets/game/zamn_profile.json`:
-
-```json
-{
-  "game": "Zombies Ate My Neighbors",
-  "memory": {
-    "health": {
-      "id": "health",
-      "label": "Health",
-      "offset": 7352,
-      "type": "u8",
-      "access": "read_write",
-      "min": 0,
-      "max": 10,
-      "notes": "Verified Player 1 health; source: <discovery notes>"
-    }
-  }
-}
-```
-
-Only add entries from **verified** memory-discovery data — never guessed
-addresses. `GameMemory` enforces field existence, type, access, and RAM bounds
-before the JNI call; the native side re-checks.
-
 ## Credits
 
 - **Game sprite art** — the minimap level maps, weapon/item icons, character
