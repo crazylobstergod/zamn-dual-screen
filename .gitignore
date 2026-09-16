@@ -1,0 +1,30 @@
+# Gradle
+.gradle/
+build/
+app/build/
+local.properties
+
+# Kotlin / IDE
+.kotlin/
+.idea/
+*.iml
+.vscode/
+
+# Build artifacts
+*.apk
+*.aab
+*.ap_
+*.keystore
+*.jks
+
+# Logs and scratch
+*.log
+captures/
+.cxx/
+
+# Never commit ROMs or game content
+*.sfc
+*.smc
+*.bin
+*.zip
+!gradle/wrapper/gradle-wrapper.jar

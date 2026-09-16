@@ -1,0 +1,455 @@
+{
+  "game": "Zombies Ate My Neighbors",
+  "memory": {
+    "health": {
+      "id": "health",
+      "label": "Health",
+      "offset": 7352,
+      "type": "u8",
+      "access": "read_write",
+      "min": 0,
+      "max": 10,
+      "notes": "Verified Player 1 health; 0-10 units = 0-100%. Two-way confirmed by controlled writes (controlled write 1 -> bar at 1 unit, human confirmed; a controlled write of 10 -> bar full, human confirmed)."
+    },
+    "ammo_low": {
+      "id": "ammo_low",
+      "label": "Squirt gun ammo (low byte)",
+      "offset": 7372,
+      "type": "u8",
+      "access": "read_write",
+      "min": 0,
+      "max": 255,
+      "notes": "LOW byte of the 16-bit little-endian squirt gun ammo counter at 0x1CCC. Compose with ammo_high (0x1CCD) as: (ammo_high << 8) | ammo_low. Verified writable by controlled writes (0x0137->'137', 0x0246->'246', 0x0050->'50' on the in-game HUD, all restored). In-game HUD renders the value in HEX digits; digits A-F render as glitch (digit font only has 0-9)."
+    },
+    "weapon_selected": {
+      "id": "weapon_selected",
+      "label": "Selected weapon (P1)",
+      "offset": 7356,
+      "type": "u8",
+      "access": "read_write",
+      "min": 0,
+      "max": 20,
+      "notes": "Canonical P1 weapon selector at 0x1CBC; writing switches the live weapon. Full ID map (verified, human-identified): 0=squirt gun, 1=fire extinguisher, 2=ray gun, 3=weed wacker, 4=holy cross, 5=canon, 6=soda cans, 7=tomatos (REAL weapon), 8=popsicle, 9=red peppers (UNRELEASED), 10=plates (released), 11=fork (released), 12=football (released), 13=flamethrower (UNRELEASED), 14-20 = not real weapons (slots occupied). Two-way causal confirmation on 0x1CBC: write 0 -> squirt gun, write 6 -> soda cans (both human confirmed); mirror 0x603A is write-inert (copy, rejected). Second screen exposes the 12 real released weapons (IDs 0-8, 10, 11, 12)."
+    },
+    "fire_ext_count": {
+      "id": "fire_ext_count",
+      "label": "Fire extinguisher count",
+      "offset": 7374,
+      "type": "u8",
+      "access": "read_write",
+      "min": 0,
+      "max": 255,
+      "notes": "Verified fire-extinguisher count at 0x1CCE (weapon ID 1). Pickup transition 0->0x99 observed; causal write 0x5A -> HUD '5' + glitch glyph (human confirmed); ownership test: write 0 -> weapon unselectable (human confirmed); restored to 0x99. HUD renders value in HEX."
+    },
+    "soda_cans": {
+      "id": "soda_cans",
+      "label": "Soda cans count",
+      "offset": 7384,
+      "type": "u8",
+      "access": "read_write",
+      "min": 0,
+      "max": 255,
+      "notes": "Verified soda-cans count at 0x1CD8 (weapon ID 6). Correlation + causal write tests: wrote 0x32 -> HUD '32'; threw one -> 0x31 and HUD '31'; wrote 0x25 -> HUD '25' (all human confirmed). HUD renders value in HEX. Soda is owned iff this count > 0 (ownership model verified on soda + fire ext.). Separate from squirt gun ammo (0x1CCC)."
+    },
+    "neighbors_remaining": {
+      "id": "neighbors_remaining",
+      "label": "Neighbors remaining to rescue (P1)",
+      "offset": 7506,
+      "type": "u8",
+      "access": "read_only",
+      "min": 0,
+      "max": 255,
+      "notes": "Verified remaining-neighbor counter at 0x1D52, shown on the in-game HUD (decimal). Correlation 10->9->8->7 across four rescue rounds (131,072 -> 343 -> 7 -> 2 candidates); causal two-way write test: wrote 3 -> HUD 3, wrote 2 -> HUD 2 (both human confirmed), restored to 7. Impostor 0x071E rejected (tracks rescues but write-inert copy). Display-only; UI must not write this."
+    },
+    "lives": {
+      "id": "lives",
+      "label": "Zeke spare lives (P1)",
+      "offset": 7500,
+      "type": "u8",
+      "access": "read_only",
+      "min": 0,
+      "max": 255,
+      "notes": "Verified Zeke spare-lives counter at 0x1D4C, as shown in the in-game HUD. Tracked 2->1->0 across two deaths (131,072 -> 605 decreased -> 50 exact-delta-1 -> 2 candidates); stayed 0 on save-state restore at 0 spare lives; next death at 0 triggered GAME OVER (human-confirmed). Impostor 0x13BF (216->215->214) rejected - jumped UP to 219 on restore, not a lives value. Display-only; UI must not write this."
+    },
+    "medkit_count": {
+      "id": "medkit_count",
+      "label": "Med-kit count (inventory)",
+      "offset": 7450,
+      "type": "u8",
+      "access": "read_write",
+      "min": 0,
+      "max": 99,
+      "notes": "Verified med-kit count at 0x1D1A (inventory list item). Tracked 1->0->1->0 across use / save-reload cycles; causal write test: wrote 2 -> inventory list showed 2 med-kits (human confirmed), restored to 1. Impostor 0x12E rejected (write-inert copy). The second-screen MEDKIT button uses this slot to consume one med-kit (write count-1) together with a full heal (health 0x1CB8 <- 10); both slots are causally-verified writable. Item slot 0 of the u16 stride-2 item array."
+    },
+    "pandora_box": {
+      "id": "pandora_box",
+      "label": "Pandora's box count",
+      "offset": 7452,
+      "type": "u8",
+      "access": "read_write",
+      "min": 0,
+      "max": 255,
+      "notes": "CONFIRMED 0x1D1C (LOW byte of item slot 1 in the u16 stride-2 item array). User verified in-game: writing this even (low-byte) slot grants Pandora's box. The array is u16 stride-2 starting at medkit 0x1D1A; the LOW byte (even address) is the grantable count, the HIGH byte (odd address) is write-inert for our purposes (writing it = +256, no new item). Second screen: READ shows live count badge; WRITE (tap PANDORA cell) grants one."
+    },
+    "skeleton_key": {
+      "id": "skeleton_key",
+      "label": "Skeleton key count",
+      "offset": 7454,
+      "type": "u8",
+      "access": "read_write",
+      "min": 0,
+      "max": 255,
+      "notes": "CONFIRMED 0x1D1E (LOW byte of item slot 2). User verified in-game: writing grants the skull / skeleton key. u16 stride-2 item array (medkit 0x1D1A + n*2). READ = live count badge; WRITE (tap SKULL KEY cell) grants one."
+    },
+    "clown_decoy": {
+      "id": "clown_decoy",
+      "label": "Clown decoy count",
+      "offset": 7456,
+      "type": "u8",
+      "access": "read_write",
+      "min": 0,
+      "max": 255,
+      "notes": "CONFIRMED 0x1D20 (LOW byte of item slot 3). User verified in-game: writing grants the clown decoy. u16 stride-2 item array. READ = live count badge; WRITE (tap CLOWNS cell) grants one."
+    },
+    "key_count": {
+      "id": "key_count",
+      "label": "Regular keys count (inventory)",
+      "offset": 7436,
+      "type": "u8",
+      "access": "read_write",
+      "min": 0,
+      "max": 255,
+      "notes": "CONFIRMED 0x1D0C via Mesen bridge differential capture + causal write test (zamn_keys project, 2026-09-14): wrote 9 -> HUD showed 9 keys, wrote 5 -> HUD showed 5 keys; human confirmed both. This is a COUNT slot (picking up a key increments it). Rejected alternatives: 0x0103/0x0A03 (game-managed mirrors, overwritten by game), 0x10E7 (NPC-related, caused flicker). Second screen: READ = live count badge; WRITE (tap KEYS cell) grants one (increment n -> n+1)."
+    },
+    "speed_shoes": {
+      "id": "speed_shoes",
+      "label": "Speed shoes count (inventory)",
+      "offset": 7438,
+      "type": "u8",
+      "access": "read_write",
+      "min": 0,
+      "max": 255,
+      "notes": "CONFIRMED 0x1D0E via Mesen bridge causal write test (zamn_keys project, 2026-09-14): wrote 1 -> speed shoes (blue shoes) item appears in HUD; restored 0 -> vanished; wrote 1 -> reappeared. Human confirmed item identity. Second screen: READ = live count badge; WRITE (tap cell) grants one."
+    },
+    "red_potion": {
+      "id": "red_potion",
+      "label": "Red potion count (monster potion)",
+      "offset": 7440,
+      "type": "u8",
+      "access": "read_write",
+      "min": 0,
+      "max": 255,
+      "notes": "CONFIRMED 0x1D10 via Mesen bridge causal write test (zamn_keys project, 2026-09-14): wrote 1 -> red (monster) potion appears; human confirmed identity. Second screen: READ = live count badge; WRITE (tap cell) grants one."
+    },
+    "blue_potion": {
+      "id": "blue_potion",
+      "label": "Blue potion count (ghost kid potion)",
+      "offset": 7442,
+      "type": "u8",
+      "access": "read_write",
+      "min": 0,
+      "max": 255,
+      "notes": "CONFIRMED 0x1D12 via Mesen bridge causal write test (zamn_keys project, 2026-09-14): wrote 1 -> blue (ghost kid) potion appears; human confirmed identity. Second screen: READ = live count badge; WRITE (tap cell) grants one."
+    },
+    "random_potion": {
+      "id": "random_potion",
+      "label": "Random potion count",
+      "offset": 7444,
+      "type": "u8",
+      "access": "read_write",
+      "min": 0,
+      "max": 255,
+      "notes": "CONFIRMED 0x1D14 via Mesen bridge causal write test (zamn_keys project, 2026-09-14): wrote 1 -> random potion appears; human confirmed identity. Second screen: READ = live count badge; WRITE (tap cell) grants one."
+    },
+    "silver_potion": {
+      "id": "silver_potion",
+      "label": "Silver potion count",
+      "offset": 7446,
+      "type": "u8",
+      "access": "read_write",
+      "min": 0,
+      "max": 255,
+      "notes": "CONFIRMED 0x1D16 via Mesen bridge causal write test (zamn_keys project, 2026-09-14): wrote 1 -> silver potion appears; human confirmed identity. Note: NOT in the in-game item list.txt (list has 9 items) — discovered by systematic walk of the stride-2 item block. Second screen: READ = live count badge; WRITE (tap cell) grants one."
+    },
+    "gold_potion": {
+      "id": "gold_potion",
+      "label": "Gold potion count",
+      "offset": 7448,
+      "type": "u8",
+      "access": "read_write",
+      "min": 0,
+      "max": 255,
+      "notes": "CONFIRMED 0x1D18 via Mesen bridge causal write test (zamn_keys project, 2026-09-14): wrote 1 -> gold potion appears; human confirmed identity. Note: NOT in the in-game item list.txt — discovered by systematic walk of the stride-2 item block. Second screen: READ = live count badge; WRITE (tap cell) grants one."
+    },
+    "item_slot_4": {
+      "id": "item_slot_4",
+      "label": "Item slot 4 (0x1D22) — RADIO: NOT a real item (EXCLUDED from UI)",
+      "offset": 7458,
+      "type": "u8",
+      "access": "read_write",
+      "min": 0,
+      "max": 255,
+      "notes": "0x1D22 is the RADIO slot: writing 1 makes the walkie-talkie appear in the HUD, but the user confirmed it is NOT a real item (dormant/debug artifact). EXCLUDED from the UI per user directive. The REAL item block is 0x1D0C..0x1D20 (12 stride-2 slots, see key_count..clown_decoy). DO NOT USE."
+    },
+    "item_slot_5": {
+      "id": "item_slot_5",
+      "label": "Item slot 5 (0x1D24) UNVERIFIED — dormant, not a confirmed item slot",
+      "offset": 7460,
+      "type": "u8",
+      "access": "read_write",
+      "min": 0,
+      "max": 255,
+      "notes": "0x1D24 lies just past the confirmed item block (which ends at 0x1D22 = radio). Writing here produced only a stray sprite artifact / nothing, never a real item. NOT referenced by any UI code. DO NOT USE until verified via Mesen bridge."
+    },
+    "item_slot_6": {
+      "id": "item_slot_6",
+      "label": "Item slot 6 (0x1D26) UNVERIFIED — dormant, not a confirmed item slot",
+      "offset": 7462,
+      "type": "u8",
+      "access": "read_write",
+      "min": 0,
+      "max": 255,
+      "notes": "0x1D26 lies just past the confirmed item block (which ends at 0x1D22 = radio). Writing here produced only a stray sprite artifact / nothing, never a real item. NOT referenced by any UI code. DO NOT USE until verified via Mesen bridge."
+    },
+    "item_slot_7": {
+      "id": "item_slot_7",
+      "label": "Item slot 7 (0x1D28) UNVERIFIED — dormant, not a confirmed item slot",
+      "offset": 7464,
+      "type": "u8",
+      "access": "read_write",
+      "min": 0,
+      "max": 255,
+      "notes": "0x1D28 lies just past the confirmed item block (which ends at 0x1D22 = radio). Writing here produced only a stray sprite artifact / nothing, never a real item. NOT referenced by any UI code. DO NOT USE until verified via Mesen bridge."
+    },
+    "item_slot_8": {
+      "id": "item_slot_8",
+      "label": "Item slot 8 (0x1D2A) UNVERIFIED — dormant, not a confirmed item slot",
+      "offset": 7466,
+      "type": "u8",
+      "access": "read_write",
+      "min": 0,
+      "max": 255,
+      "notes": "0x1D2A lies just past the confirmed item block (which ends at 0x1D22 = radio). Writing here produced only a stray sprite artifact / nothing, never a real item. NOT referenced by any UI code. DO NOT USE until verified via Mesen bridge."
+    },
+    "neighbors_rescued": {
+      "id": "neighbors_rescued",
+      "label": "Neighbors rescued (P1)",
+      "offset": 8092,
+      "type": "u8",
+      "access": "read_only",
+      "min": 0,
+      "max": 255,
+      "notes": "Collected-neighbor counter at 0x1F9C; tracked 0->1->...->10 across all 11 WRAM snapshots in level 1. Monotonic within a level; reliable level-invariant rescue trigger. Display-only; UI must not write this."
+    },
+    "last_rescued_x": {
+      "id": "last_rescued_x",
+      "label": "Last rescued neighbor X (low)",
+      "offset": 6840,
+      "type": "u8",
+      "access": "read_only",
+      "min": 0,
+      "max": 255,
+      "notes": "S11 rescue-latch record (0x1AB0): byte 8 = LOW byte of 16-bit LE world X of the most recently rescued neighbor (compose with last_rescued_x_hi: worldX = (hi << 8) | lo). VERIFIED 16-bit: at all 10 rescues (11 WRAM snapshots, ) the latch u16 exactly equals P1's 16-bit position (0x0130/0x0132), e.g. (366,579) not (110,67). Latches ONLY at rescue events. Display-only."
+    },
+    "last_rescued_x_hi": {
+      "id": "last_rescued_x_hi",
+      "label": "Last rescued neighbor X (high)",
+      "offset": 6841,
+      "type": "u8",
+      "access": "read_only",
+      "min": 0,
+      "max": 255,
+      "notes": "S11 rescue-latch record (0x1AB0): byte 9 = HIGH byte of 16-bit LE world X (observed values 1-5, page disambiguator - without it all rescues cluster in the map's top-left 256px corner). Verified 10/10 against P1 position at rescue time. Display-only."
+    },
+    "last_rescued_y": {
+      "id": "last_rescued_y",
+      "label": "Last rescued neighbor Y (low)",
+      "offset": 6844,
+      "type": "u8",
+      "access": "read_only",
+      "min": 0,
+      "max": 255,
+      "notes": "S11 rescue-latch record (0x1AB0): byte 12 = LOW byte of 16-bit LE world Y (compose with last_rescued_y_hi: worldY = (hi << 8) | lo). Verified 16-bit, 10/10 vs P1 position at rescue time. CAUTION: byte 15 (0x1ABF) is NOT a coordinate (stale 0x90-0x91) - do not use it as Y. Display-only."
+    },
+    "last_rescued_y_hi": {
+      "id": "last_rescued_y_hi",
+      "label": "Last rescued neighbor Y (high)",
+      "offset": 6845,
+      "type": "u8",
+      "access": "read_only",
+      "min": 0,
+      "max": 255,
+      "notes": "S11 rescue-latch record (0x1AB0): byte 13 = HIGH byte of 16-bit LE world Y (observed values {0,1,2}). Verified 10/10 against P1 position at rescue time across all 11 snapshots. Display-only."
+    },
+    "p1_x": {
+      "id": "p1_x",
+      "label": "Player 1 X position",
+      "offset": 304,
+      "type": "u8",
+      "access": "read_only",
+      "min": 0,
+      "max": 255,
+      "notes": "Verified P1-X at 0x0130 (LOW byte of the 16-bit little-endian worldX; compose with p1_x_hi: worldX = (p1_x_hi << 8) | p1_x). Controlled write test: wrote 150 -> P1 teleported right (through wall); restored to 19 -> P1 returned to original spot. Mirrors 0x090E/0x0A1A. Display-only; UI must not write this."
+    },
+    "p1_y": {
+      "id": "p1_y",
+      "label": "Player 1 Y position",
+      "offset": 306,
+      "type": "u8",
+      "access": "read_only",
+      "min": 0,
+      "max": 255,
+      "notes": "Verified P1-Y at 0x0132 (LOW byte of the 16-bit little-endian worldY; compose with p1_y_hi: worldY = (p1_y_hi << 8) | p1_y). Controlled write test: wrote 30 -> P1 teleported UP; restored to 142 -> P1 moved DOWN back to original spot. Y grows downward. Display-only; UI must not write this."
+    },
+    "p1_x_hi": {
+      "id": "p1_x_hi",
+      "label": "Player 1 X position (high byte)",
+      "offset": 305,
+      "type": "u8",
+      "access": "read_only",
+      "min": 0,
+      "max": 255,
+      "notes": "HIGH byte of the 16-bit little-endian worldX at 0x0130/0x0131 (worldX = (p1_x_hi << 8) | p1_x). Verified: continuity test (straight left-walk, worldX 1336 -> 658 smooth while low byte wrapped) + multi-mirror 0x090F/0x0A1B/0x1AB9/0x1CB1 track exactly. This high byte is the page disambiguator: low byte alone cannot locate P1 (5*256 = 1280 px gap explained by the page structure). Display-only; UI must not write this."
+    },
+    "p1_y_hi": {
+      "id": "p1_y_hi",
+      "label": "Player 1 Y position (high byte)",
+      "offset": 307,
+      "type": "u8",
+      "access": "read_only",
+      "min": 0,
+      "max": 255,
+      "notes": "HIGH byte of the 16-bit little-endian worldY at 0x0132/0x0133 (worldY = (p1_y_hi << 8) | p1_y). Verified: high observed at {0, 2, 3} with low varying within each band (same page+offset structure as X). Display-only; UI must not write this."
+    },
+    "ammo_high": {
+      "id": "ammo_high",
+      "label": "Squirt gun ammo (high byte)",
+      "offset": 7373,
+      "type": "u8",
+      "access": "read_write",
+      "min": 0,
+      "max": 255,
+      "notes": "HIGH byte of the 16-bit little-endian squirt gun ammo counter at 0x1CCC. Companion to ammo_low (0x1CCC). Part of the same verified writable u16 field."
+    },
+    "current_level": {
+      "id": "current_level",
+      "label": "Current level number (1-based)",
+      "offset": 7804,
+      "type": "u8",
+      "access": "read_write",
+      "min": 0,
+      "max": 255,
+      "notes": "Verified level/stage counter at 0x1E7C (decimal 7804), u8, 1-based (new games start at 1). Tracked L2->L1->L2->L3 perfectly (01->02->03) while impostors 0x0B01/0x1B6D/0x6D55 diverged; causal cheat test: wrote 7 at the main menu -> new game started in Level 7 (human confirmed). The game reads it at level load. Second screen: READ drives minimap map selection (levels 1-2 ship maps); WRITE backs the on-screen DEBUG level-jump menu (buttons 1-10) — verified write path is main menu -> new game starts on that level."
+    },
+    "ray_gun_count": {
+      "id": "ray_gun_count",
+      "label": "Ray gun count (weapon ID 2)",
+      "offset": 7376,
+      "type": "u8",
+      "access": "read_write",
+      "min": 0,
+      "max": 255,
+      "notes": "Verified weapon count slot at 0x1CD0 (weapon ID 2). Uniform spacing formula 'slot = 0x1CCE + 2*(ID-1)' confirmed across all 21 weapon slots. OWNERSHIP MODEL (verified on soda + fire ext.): weapon owned iff count > 0; grant = write count > 0, remove = write 0 (becomes unselectable). Causal write test: wrote 5 -> HUD showed '5' for this weapon (human confirmed). HUD renders the value in HEX. Second screen: READ = live count badge + ownership gate; tap selects the weapon (writes weapon_selected)."
+    },
+    "weed_wacker_count": {
+      "id": "weed_wacker_count",
+      "label": "Weed wacker count (weapon ID 3)",
+      "offset": 7378,
+      "type": "u8",
+      "access": "read_write",
+      "min": 0,
+      "max": 255,
+      "notes": "Verified weapon count slot at 0x1CD2 (weapon ID 3). Uniform spacing formula 'slot = 0x1CCE + 2*(ID-1)' confirmed across all 21 weapon slots. OWNERSHIP MODEL (verified on soda + fire ext.): weapon owned iff count > 0; grant = write count > 0, remove = write 0 (becomes unselectable). Causal write test: wrote 5 -> HUD showed '5' for this weapon (human confirmed). HUD renders the value in HEX. Second screen: READ = live count badge + ownership gate; tap selects the weapon (writes weapon_selected)."
+    },
+    "holy_cross_count": {
+      "id": "holy_cross_count",
+      "label": "Holy cross count (weapon ID 4)",
+      "offset": 7380,
+      "type": "u8",
+      "access": "read_write",
+      "min": 0,
+      "max": 255,
+      "notes": "Verified weapon count slot at 0x1CD4 (weapon ID 4). Uniform spacing formula 'slot = 0x1CCE + 2*(ID-1)' confirmed across all 21 weapon slots. OWNERSHIP MODEL (verified on soda + fire ext.): weapon owned iff count > 0; grant = write count > 0, remove = write 0 (becomes unselectable). Causal write test: wrote 5 -> HUD showed '5' for this weapon (human confirmed). HUD renders the value in HEX. Second screen: READ = live count badge + ownership gate; tap selects the weapon (writes weapon_selected)."
+    },
+    "cannon_count": {
+      "id": "cannon_count",
+      "label": "Cannon / large gun count (weapon ID 5)",
+      "offset": 7382,
+      "type": "u8",
+      "access": "read_write",
+      "min": 0,
+      "max": 255,
+      "notes": "Verified weapon count slot at 0x1CD6 (weapon ID 5). Uniform spacing formula 'slot = 0x1CCE + 2*(ID-1)' confirmed across all 21 weapon slots. OWNERSHIP MODEL (verified on soda + fire ext.): weapon owned iff count > 0; grant = write count > 0, remove = write 0 (becomes unselectable). Causal write test: wrote 5 -> HUD showed '5' for this weapon (human confirmed). HUD renders the value in HEX. Second screen: READ = live count badge + ownership gate; tap selects the weapon (writes weapon_selected)."
+    },
+    "tomato_count": {
+      "id": "tomato_count",
+      "label": "Tomatos count (weapon ID 7, REAL weapon)",
+      "offset": 7386,
+      "type": "u8",
+      "access": "read_write",
+      "min": 0,
+      "max": 255,
+      "notes": "Verified weapon count slot at 0x1CDA (weapon ID 7). Uniform spacing formula 'slot = 0x1CCE + 2*(ID-1)' confirmed across all 21 weapon slots. OWNERSHIP MODEL (verified on soda + fire ext.): weapon owned iff count > 0; grant = write count > 0, remove = write 0 (becomes unselectable). Causal write test: wrote 5 -> HUD showed '5' for this weapon (human confirmed). HUD renders the value in HEX. Second screen: READ = live count badge + ownership gate; tap selects the weapon (writes weapon_selected)."
+    },
+    "popsicle_count": {
+      "id": "popsicle_count",
+      "label": "Popsicle count (weapon ID 8)",
+      "offset": 7388,
+      "type": "u8",
+      "access": "read_write",
+      "min": 0,
+      "max": 255,
+      "notes": "Verified weapon count slot at 0x1CDC (weapon ID 8). Uniform spacing formula 'slot = 0x1CCE + 2*(ID-1)' confirmed across all 21 weapon slots. OWNERSHIP MODEL (verified on soda + fire ext.): weapon owned iff count > 0; grant = write count > 0, remove = write 0 (becomes unselectable). Causal write test: wrote 5 -> HUD showed '5' for this weapon (human confirmed). HUD renders the value in HEX. Second screen: READ = live count badge + ownership gate; tap selects the weapon (writes weapon_selected)."
+    },
+    "plate_count": {
+      "id": "plate_count",
+      "label": "Plates count (weapon ID 10, released)",
+      "offset": 7392,
+      "type": "u8",
+      "access": "read_write",
+      "min": 0,
+      "max": 255,
+      "notes": "Verified weapon count slot at 0x1CE0 (weapon ID 10). Uniform spacing formula 'slot = 0x1CCE + 2*(ID-1)' confirmed across all 21 weapon slots. OWNERSHIP MODEL (verified on soda + fire ext.): weapon owned iff count > 0; grant = write count > 0, remove = write 0 (becomes unselectable). Causal write test: wrote 5 -> HUD showed '5' for this weapon (human confirmed). HUD renders the value in HEX. Second screen: READ = live count badge + ownership gate; tap selects the weapon (writes weapon_selected)."
+    },
+    "fork_count": {
+      "id": "fork_count",
+      "label": "Fork count (weapon ID 11, released)",
+      "offset": 7394,
+      "type": "u8",
+      "access": "read_write",
+      "min": 0,
+      "max": 255,
+      "notes": "Verified weapon count slot at 0x1CE2 (weapon ID 11). Uniform spacing formula 'slot = 0x1CCE + 2*(ID-1)' confirmed across all 21 weapon slots. OWNERSHIP MODEL (verified on soda + fire ext.): weapon owned iff count > 0; grant = write count > 0, remove = write 0 (becomes unselectable). Causal write test: wrote 5 -> HUD showed '5' for this weapon (human confirmed). HUD renders the value in HEX. Second screen: READ = live count badge + ownership gate; tap selects the weapon (writes weapon_selected)."
+    },
+    "football_count": {
+      "id": "football_count",
+      "label": "Football count (weapon ID 12, released)",
+      "offset": 7396,
+      "type": "u8",
+      "access": "read_write",
+      "min": 0,
+      "max": 255,
+      "notes": "Verified weapon count slot at 0x1CE4 (weapon ID 12). Uniform spacing formula 'slot = 0x1CCE + 2*(ID-1)' confirmed across all 21 weapon slots. OWNERSHIP MODEL (verified on soda + fire ext.): weapon owned iff count > 0; grant = write count > 0, remove = write 0 (becomes unselectable). Causal write test: wrote 5 -> HUD showed '5' for this weapon (human confirmed). HUD renders the value in HEX. Second screen: READ = live count badge + ownership gate; tap selects the weapon (writes weapon_selected)."
+    },
+    "red_pepper_count": {
+      "id": "red_pepper_count",
+      "label": "Red peppers count (weapon ID 9, UNRELEASED)",
+      "offset": 7390,
+      "type": "u8",
+      "access": "read_write",
+      "min": 0,
+      "max": 255,
+      "notes": "Verified weapon count slot at 0x1CDE (weapon ID 9). Uniform spacing formula 'slot = 0x1CCE + 2*(ID-1)' confirmed across all 21 weapon slots. OWNERSHIP MODEL: weapon owned iff count > 0. Causal write test: wrote 5 -> HUD showed '5' (human confirmed). HUD renders the value in HEX. UNRELEASED in the retail game — included in the UI per user request. Second screen: READ = live count badge + ownership gate; tap selects the weapon (writes weapon_selected)."
+    },
+    "flamethrower_count": {
+      "id": "flamethrower_count",
+      "label": "Flamethrower count (weapon ID 13, UNRELEASED)",
+      "offset": 7398,
+      "type": "u8",
+      "access": "read_write",
+      "min": 0,
+      "max": 255,
+      "notes": "Verified weapon count slot at 0x1CE6 (weapon ID 13). Uniform spacing formula 'slot = 0x1CCE + 2*(ID-1)' confirmed across all 21 weapon slots. OWNERSHIP MODEL: weapon owned iff count > 0. Causal write test: wrote 5 -> HUD showed '5' (human confirmed). HUD renders the value in HEX. UNRELEASED in the retail game — included in the UI per user request, pinned to the BOTTOM of the weapon list. Second screen: READ = live count badge + ownership gate; tap selects the weapon (writes weapon_selected)."
+    }
+  }
+}

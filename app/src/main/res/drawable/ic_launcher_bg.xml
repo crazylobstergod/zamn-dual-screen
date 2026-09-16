@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Adaptive-icon background: dark slate fill + acid-green ring at the full
+  canvas edge. The launcher's shape mask (circular on stock launcher3) clips
+  the ring into a perfect rim at the visible edge; no launcher-drawn plate
+  is involved.
+-->
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <item>
+        <color android:color="#3C424A" />
+    </item>
+    <item>
+        <shape android:shape="oval">
+            <solid android:color="#3C424A" />
+            <stroke android:width="6dp" android:color="#70FF64" />
+        </shape>
+    </item>
+</layer-list>
