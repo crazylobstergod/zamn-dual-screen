@@ -146,19 +146,11 @@ Only add entries from **verified** memory-discovery data — never guessed
 addresses. `GameMemory` enforces field existence, type, access, and RAM bounds
 before the JNI call; the native side re-checks.
 
-## Extending to another game
-
-1. Drop your libretro core into `third_party/` (or point CMake at it) and
-   adjust `cpp/frontend.cpp` / `CMakeLists.txt`.
-2. Replace `assets/game/zamn_profile.json` with your own field profile.
-3. Rewrite `game/second_screen/*` to your HUD; keep `runtime/` untouched.
-4. Update the expected ROM hash in `game/rom/RomGate.kt`.
-
 ## Credits
 
 - **Game sprite art** — the minimap level maps, weapon/item icons, character
   sprites, and the launcher face were obtained from
-  [Spriters Resource](https://spritersresource.com/), a fan-run archive of
+  [Spriters Resource](https://www.spriters-resource.com/), a fan-run archive of
   game sprite data. The artwork itself remains © its original rights holders
   (for ZAMN: Nintendo); Spriters Resource is the source the sprite data was
   taken from. Used here for a personal, non-commercial project.
