@@ -28,7 +28,7 @@ No `androidx`. Kotlin + a small C++ libretro frontend around the Snes9x core.
 - **Standby screen** — while the menu is up, the dash display shows a blurred
   level-map backdrop instead of a blank window
 - **Adaptive launcher icon** — correct on launchers that would otherwise wrap
-  legacy icons in a white plate (see `DESIGN_GUIDE.md`)
+  legacy icons in a white plate
 
 ## Architecture
 
@@ -45,7 +45,7 @@ primary display                     secondary display
 ```
 
 - `runtime/` — the generic, game-agnostic layer: display hosting, memory API,
-  emulator state. **Don't break this when adding game UI** (see `DESIGN_GUIDE.md`).
+  emulator state. **Don't break this when adding game UI**.
 - `game/` — ZAMN-specific: profile, HUD, minimap, ROM gate, menu, standby.
   Replace this whole package for a different game.
 - `cpp/frontend.cpp` — the libretro frontend: core init, input, memory reads,
@@ -69,8 +69,7 @@ primary display                     secondary display
 │       │   └── game/{menu,profile,rom,second_screen}/  # game layer
 │       └── res/                         # widgets, maps, adaptive icon
 ├── third_party/snes9x-libretro/         # upstream core (do not edit)
-├── gradlew / gradle/                    # wrapper (Gradle 8.7)
-└── DESIGN_GUIDE.md                      # safe-to-touch vs. leave-alone map
+└── gradlew / gradle/                    # wrapper (Gradle 8.7)
 ```
 
 ## Requirements
@@ -142,9 +141,3 @@ adb shell am start -n com.example.snestemplate/.MainActivity
   xBRZ) carry their own licenses in the same tree.
 - **Everything else in this repo** (the `app/` module, frontend, docs):
   [MIT](LICENSE), see `LICENSE`.
-
-## Documentation
-
-- [`DESIGN_GUIDE.md`](DESIGN_GUIDE.md) — architecture notes, safe-to-touch
-  files vs. leave-alone files, launcher-icon design rationale, controller
-  menu behavior.
